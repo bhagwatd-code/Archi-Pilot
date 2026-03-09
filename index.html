@@ -1,0 +1,436 @@
+import { useState, useRef, useEffect } from "react";
+
+const C = {
+  bg:"#05080d",surface:"#0b1220",surface2:"#0f1a2e",surface3:"#142038",
+  border:"#1c2f48",accent:"#00d4ff",accent2:"#0055ff",accent3:"#00ffaa",
+  amber:"#ffb84d",red:"#ff4d6d",text:"#ddeeff",muted:"#4d6b88",muted2:"#7a99bb"
+};
+
+function ArchDiagram({ type }) {
+  const diagrams = {
+    bfsi_dr:{
+      nodes:[
+        {id:"internet",x:10,y:130,w:85,h:42,label:"Internet",icon:"🌐",sub:"Users",col:C.muted},
+        {id:"waf",x:115,y:130,w:95,h:42,label:"WAF / DDoS",icon:"🛡️",sub:"Protection",col:C.amber},
+        {id:"lb_p",x:230,y:70,w:110,h:42,label:"Load Balancer",icon:"⚖️",sub:"Mumbai Primary",col:C.accent},
+        {id:"lb_dr",x:230,y:200,w:110,h:42,label:"Standby LB",icon:"⚖️",sub:"Chennai DR",col:C.muted},
+        {id:"app_p",x:365,y:50,w:110,h:42,label:"App Cluster ×3",icon:"⚙️",sub:"Active",col:C.accent},
+        {id:"app_dr",x:365,y:185,w:110,h:42,label:"App Cluster ×2",icon:"⚙️",sub:"Warm Standby",col:C.muted},
+        {id:"db_p",x:365,y:110,w:110,h:42,label:"DB Primary",icon:"🗄️",sub:"PostgreSQL HA",col:C.accent3},
+        {id:"db_dr",x:365,y:240,w:110,h:42,label:"DB Replica",icon:"🗄️",sub:"Sync Replication",col:C.muted},
+        {id:"rto",x:505,y:143,w:115,h:42,label:"RTO: 12 min",icon:"⚡",sub:"RPO: ~0 sec",col:C.accent3},
+      ],
+      edges:[
+        {f:"internet",t:"waf",solid:true},{f:"waf",t:"lb_p",solid:true},{f:"waf",t:"lb_dr"},
+        {f:"lb_p",t:"app_p",solid:true},{f:"lb_dr",t:"app_dr"},{f:"app_p",t:"db_p",solid:true},
+        {f:"app_dr",t:"db_dr"},{f:"db_p",t:"db_dr",label:"SYNC REPL",col:C.accent3,solid:true},
+        {f:"lb_p",t:"lb_dr",label:"Failover",col:C.amber},{f:"db_p",t:"rto"},
+      ]
+    },
+    ecommerce:{
+      nodes:[
+        {id:"cdn",x:10,y:125,w:90,h:42,label:"CDN Edge",icon:"🌍",sub:"Cache 85%",col:C.amber},
+        {id:"lb",x:125,y:125,w:100,h:42,label:"Smart LB",icon:"⚖️",sub:"eNlight",col:C.accent},
+        {id:"app",x:255,y:55,w:115,h:42,label:"App Nodes",icon:"⚙️",sub:"4→200 auto",col:C.accent},
+        {id:"api",x:255,y:125,w:115,h:42,label:"API Gateway",icon:"🔌",sub:"2→80 auto",col:C.accent2},
+        {id:"cache",x:255,y:195,w:115,h:42,label:"Redis Cache",icon:"⚡",sub:"×6 cluster",col:C.accent3},
+        {id:"db",x:400,y:88,w:115,h:42,label:"DB+Replicas",icon:"🗄️",sub:"×12 read replicas",col:C.accent3},
+        {id:"queue",x:400,y:168,w:115,h:42,label:"Msg Queue",icon:"📨",sub:"RabbitMQ HA",col:C.amber},
+        {id:"scale",x:542,y:125,w:108,h:42,label:"90s Scale-Up",icon:"📈",sub:"CPU>60% trigger",col:C.accent3},
+      ],
+      edges:[
+        {f:"cdn",t:"lb",solid:true},{f:"lb",t:"app",solid:true},{f:"lb",t:"api",solid:true},
+        {f:"lb",t:"cache"},{f:"app",t:"db",solid:true},{f:"api",t:"db"},{f:"api",t:"queue"},
+        {f:"app",t:"cache"},{f:"app",t:"scale",label:"triggers",col:C.accent3},
+      ]
+    },
+    healthcare:{
+      nodes:[
+        {id:"user",x:10,y:125,w:90,h:42,label:"Clinicians",icon:"👨‍⚕️",sub:"Web/Mobile",col:C.muted},
+        {id:"abdm",x:125,y:55,w:110,h:42,label:"ABDM Gateway",icon:"🏥",sub:"HL7 FHIR R4",col:C.accent3},
+        {id:"api",x:125,y:125,w:110,h:42,label:"API Layer",icon:"🔌",sub:"mTLS encrypted",col:C.accent},
+        {id:"auth",x:125,y:195,w:110,h:42,label:"Auth/IAM",icon:"🔐",sub:"Keycloak HA",col:C.amber},
+        {id:"hms",x:268,y:88,w:115,h:42,label:"HMS Services",icon:"⚙️",sub:"Microservices",col:C.accent},
+        {id:"fhir",x:268,y:172,w:115,h:42,label:"FHIR Store",icon:"📋",sub:"Patient records",col:C.accent3},
+        {id:"db",x:415,y:88,w:112,h:42,label:"Encrypted DB",icon:"🗄️",sub:"AES-256 at rest",col:C.accent3},
+        {id:"audit",x:415,y:172,w:112,h:42,label:"Audit Trail",icon:"📜",sub:"Immutable logs",col:C.amber},
+        {id:"vault",x:555,y:125,w:90,h:42,label:"Backup Vault",icon:"💾",sub:"7-yr retention",col:C.muted},
+      ],
+      edges:[
+        {f:"user",t:"api",solid:true},{f:"user",t:"abdm"},{f:"abdm",t:"hms",solid:true},
+        {f:"api",t:"hms",solid:true},{f:"api",t:"auth"},{f:"hms",t:"db",solid:true},
+        {f:"hms",t:"fhir",solid:true},{f:"fhir",t:"audit",label:"log",col:C.amber},
+        {f:"db",t:"vault"},{f:"audit",t:"vault"},
+      ]
+    },
+    smartcity:{
+      nodes:[
+        {id:"sensors",x:10,y:125,w:95,h:42,label:"IoT Sensors",icon:"📡",sub:"500K devices",col:C.muted},
+        {id:"gw",x:130,y:125,w:95,h:42,label:"Edge Gateway",icon:"🔲",sub:"<5ms latency",col:C.amber},
+        {id:"edge",x:255,y:55,w:105,h:42,label:"Edge DC Node",icon:"🏗️",sub:"Tier-2 cities",col:C.amber},
+        {id:"mqtt",x:255,y:125,w:105,h:42,label:"MQTT Broker",icon:"📨",sub:"Event stream",col:C.accent2},
+        {id:"proc",x:255,y:195,w:105,h:42,label:"Local Analytics",icon:"🧠",sub:"Real-time alerts",col:C.accent},
+        {id:"cloud",x:392,y:88,w:115,h:42,label:"ESDS Mumbai",icon:"☁️",sub:"Core cloud",col:C.accent},
+        {id:"tsdb",x:392,y:168,w:115,h:42,label:"Time-Series DB",icon:"📊",sub:"InfluxDB cluster",col:C.accent3},
+        {id:"dash",x:535,y:125,w:108,h:42,label:"City Dashboard",icon:"🖥️",sub:"Command centre",col:C.accent3},
+      ],
+      edges:[
+        {f:"sensors",t:"gw",solid:true},{f:"gw",t:"edge",solid:true},{f:"gw",t:"mqtt",solid:true},
+        {f:"edge",t:"cloud",label:"aggregate",col:C.accent},{f:"mqtt",t:"proc"},
+        {f:"mqtt",t:"cloud",solid:true},{f:"cloud",t:"tsdb",solid:true},{f:"tsdb",t:"dash",solid:true},
+        {f:"proc",t:"dash",label:"alerts",col:C.amber},
+      ]
+    },
+    govt:{
+      nodes:[
+        {id:"users",x:10,y:125,w:90,h:42,label:"Govt Users",icon:"🏛️",sub:"VPN/NIC Net",col:C.muted},
+        {id:"vpn",x:125,y:125,w:100,h:42,label:"Dedicated VPN",icon:"🔒",sub:"Encrypted tunnel",col:C.amber},
+        {id:"iam",x:255,y:55,w:110,h:42,label:"MeitY IAM",icon:"🔐",sub:"Role-based access",col:C.amber},
+        {id:"app",x:255,y:125,w:110,h:42,label:"Govt App Tier",icon:"⚙️",sub:"Dedicated tenant",col:C.accent},
+        {id:"hsm",x:255,y:195,w:110,h:42,label:"HSM Encrypt",icon:"🔑",sub:"In-country keys",col:C.accent3},
+        {id:"db",x:398,y:88,w:110,h:42,label:"Sovereign DB",icon:"🗄️",sub:"Air-gapped option",col:C.accent3},
+        {id:"audit",x:398,y:172,w:110,h:42,label:"CISO Audit",icon:"📜",sub:"Immutable+STQC",col:C.amber},
+        {id:"vault",x:538,y:125,w:100,h:42,label:"Secure Vault",icon:"💾",sub:"India-only backup",col:C.muted},
+      ],
+      edges:[
+        {f:"users",t:"vpn",solid:true},{f:"vpn",t:"iam",solid:true},{f:"vpn",t:"app",solid:true},
+        {f:"iam",t:"app"},{f:"app",t:"hsm",solid:true},{f:"app",t:"db",solid:true},
+        {f:"hsm",t:"db",label:"encrypt",col:C.accent3,solid:true},
+        {f:"db",t:"audit",label:"log all",col:C.amber},{f:"db",t:"vault"},{f:"audit",t:"vault"},
+      ]
+    },
+    generic:{
+      nodes:[
+        {id:"users",x:10,y:125,w:85,h:42,label:"Users",icon:"👤",sub:"Web/Mobile",col:C.muted},
+        {id:"cdn",x:120,y:60,w:95,h:42,label:"CDN",icon:"🌍",sub:"Edge cache",col:C.amber},
+        {id:"lb",x:120,y:125,w:95,h:42,label:"Load Balancer",icon:"⚖️",sub:"HA pair",col:C.accent},
+        {id:"waf",x:120,y:195,w:95,h:42,label:"WAF",icon:"🛡️",sub:"DDoS protect",col:C.amber},
+        {id:"app",x:250,y:88,w:115,h:42,label:"App Servers",icon:"⚙️",sub:"Auto-scale cluster",col:C.accent},
+        {id:"cache",x:250,y:175,w:115,h:42,label:"Cache Layer",icon:"⚡",sub:"Redis HA",col:C.accent3},
+        {id:"db",x:400,y:88,w:110,h:42,label:"Database",icon:"🗄️",sub:"Primary+replica",col:C.accent3},
+        {id:"store",x:400,y:172,w:110,h:42,label:"Object Store",icon:"📦",sub:"S3-compatible",col:C.accent2},
+        {id:"mon",x:542,y:125,w:100,h:42,label:"Monitoring",icon:"📊",sub:"NOC+Alerts",col:C.muted},
+      ],
+      edges:[
+        {f:"users",t:"cdn",solid:true},{f:"users",t:"lb",solid:true},{f:"users",t:"waf"},
+        {f:"cdn",t:"app"},{f:"lb",t:"app",solid:true},{f:"waf",t:"app"},
+        {f:"app",t:"db",solid:true},{f:"app",t:"cache"},{f:"app",t:"store"},
+        {f:"db",t:"mon"},{f:"app",t:"mon"},
+      ]
+    }
+  };
+
+  const d = diagrams[type] || diagrams.generic;
+  const W=660,H=310;
+  const nm={};
+  d.nodes.forEach(n=>{nm[n.id]=n;});
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{display:"block"}}>
+      <defs>
+        <marker id="ar" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill={C.accent} opacity="0.75"/>
+        </marker>
+        <marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill={C.amber} opacity="0.85"/>
+        </marker>
+        <marker id="ar3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill={C.accent3} opacity="0.85"/>
+        </marker>
+        <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <rect width={W} height={H} fill={C.surface2} rx="10"/>
+      {Array.from({length:16}).map((_,i)=><line key={`gx${i}`} x1={i*44} y1={0} x2={i*44} y2={H} stroke="rgba(0,212,255,0.03)" strokeWidth="1"/>)}
+      {Array.from({length:8}).map((_,i)=><line key={`gy${i}`} x1={0} y1={i*44} x2={W} y2={i*44} stroke="rgba(0,212,255,0.03)" strokeWidth="1"/>)}
+
+      {d.edges.map((e,i)=>{
+        const fn=nm[e.f],tn=nm[e.t];
+        if(!fn||!tn) return null;
+        const x1=fn.x+fn.w/2,y1=fn.y+fn.h/2,x2=tn.x+tn.w/2,y2=tn.y+tn.h/2;
+        const col=e.col||C.accent;
+        const mk=col===C.amber?"url(#ar2)":col===C.accent3?"url(#ar3)":"url(#ar)";
+        return(
+          <g key={i}>
+            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={col} strokeWidth="1.5"
+              opacity="0.5" strokeDasharray={e.solid?"none":"6,4"} markerEnd={mk}/>
+            {e.label&&<text x={(x1+x2)/2} y={(y1+y2)/2-6} textAnchor="middle" fontSize="9"
+              fill={col} opacity="0.9" fontWeight="600">{e.label}</text>}
+          </g>
+        );
+      })}
+
+      {d.nodes.map((n)=>{
+        const col=n.col||C.accent2;
+        return(
+          <g key={n.id}>
+            <rect x={n.x-3} y={n.y-3} width={n.w+6} height={n.h+6} rx="12"
+              fill={col} opacity="0.08" filter="url(#glow)"/>
+            <rect x={n.x} y={n.y} width={n.w} height={n.h} rx="9"
+              fill={C.surface3} stroke={col} strokeWidth="1.5"/>
+            <text x={n.x+11} y={n.y+n.h/2+6} fontSize="14">{n.icon}</text>
+            <text x={n.x+32} y={n.y+n.h/2+(n.sub?-3:5)} fontSize="11"
+              fontWeight="600" fill={C.text}>{n.label}</text>
+            {n.sub&&<text x={n.x+32} y={n.y+n.h/2+11} fontSize="9" fill={C.muted}>{n.sub}</text>}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+export default function Archi() {
+  const [messages,setMessages]=useState([]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const chatRef=useRef(null);
+
+  useEffect(()=>{
+    if(chatRef.current) chatRef.current.scrollTop=chatRef.current.scrollHeight;
+  },[messages,loading]);
+
+  const SCENARIOS=[
+    {icon:"🏦",title:"BFSI Core Banking DR",sub:"RBI-compliant failover",prompt:"Design a disaster recovery architecture for a core banking app. RTO 15 mins, RPO near-zero, RBI IT Framework compliant, primary Mumbai, DR Chennai."},
+    {icon:"🛒",title:"E-Commerce Auto-Scale",sub:"50x Diwali traffic",prompt:"Design an e-commerce architecture to handle 50x traffic spike during Diwali sale with CDN, auto-scaling, cost optimization on ESDS cloud."},
+    {icon:"🏥",title:"Healthcare / ABDM",sub:"ABDM + HIPAA compliant",prompt:"Design an ABDM-compliant hospital management system on ESDS. HL7 FHIR R4, data in India, HIPAA, 50 concurrent users."},
+    {icon:"🏙️",title:"Smart City IoT",sub:"500K devices, edge+cloud",prompt:"Design edge plus cloud architecture for smart city IoT. 500,000 sensors, real-time analytics, low latency edge in tier-2 cities."},
+    {icon:"🏛️",title:"Govt Sovereign Cloud",sub:"MeitY + GI Cloud",prompt:"Design a MeitY empanelled sovereign cloud for a government department. Dedicated tenancy, HSM encryption, data in India, GI Cloud compatible."},
+  ];
+
+  async function sendMessage(text){
+    const msg=text||input.trim();
+    if(!msg||loading) return;
+    setInput("");
+    setMessages(prev=>[...prev,{role:"user",text:msg}]);
+    setLoading(true);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:`You are Archi, AI Infrastructure Copilot for ESDS — India's sovereign cloud provider with Tier 4 DCs in Mumbai & Chennai, eNlight auto-scaling, MeitY empanelled.
+
+Respond ONLY with raw JSON, no markdown, no backticks:
+{
+  "summary": "2-sentence plain English explanation of what you are designing",
+  "diagram_type": "bfsi_dr|ecommerce|healthcare|smartcity|govt|generic",
+  "components": ["component1","component2","component3","component4","component5"],
+  "cost_total": "₹X,XX,XXX/month",
+  "cost_compute": "₹XX,XXX",
+  "cost_storage": "₹XX,XXX",
+  "rto": "X minutes or N/A",
+  "compliance": ["standard1","standard2","standard3"],
+  "esds_edge": "One sentence why ESDS wins here vs AWS/Azure",
+  "next_step": "Recommended immediate action"
+}
+
+diagram_type rules: bfsi_dr=banking/RBI/DR/finance, ecommerce=retail/traffic/scale/shopping, healthcare=hospital/ABDM/HIPAA/medical, smartcity=IoT/edge/city/sensors, govt=government/MeitY/sovereign/GI Cloud, generic=everything else.
+Costs in INR realistic for ESDS (20-40% cheaper than hyperscalers).`,
+          messages:[{role:"user",content:msg}]
+        })
+      });
+      const data=await res.json();
+      const raw=data.content?.map(c=>c.text||"").join("").trim().replace(/```json|```/g,"").trim();
+      const result=JSON.parse(raw);
+      setMessages(prev=>[...prev,{role:"archi",result}]);
+    }catch(err){
+      setMessages(prev=>[...prev,{role:"archi",error:err.message}]);
+    }
+    setLoading(false);
+  }
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"100vh",background:C.bg,color:C.text,fontFamily:"'Segoe UI',system-ui,sans-serif",overflow:"hidden"}}>
+      <style>{`
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes b0{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-6px);opacity:1}}
+        @keyframes b1{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-6px);opacity:1}}
+        @keyframes b2{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-6px);opacity:1}}
+        .d0{animation:b0 1.2s infinite}.d1{animation:b1 1.2s .2s infinite}.d2{animation:b2 1.2s .4s infinite}
+        .sc:hover{background:${C.surface2}!important;border-color:${C.border}!important;}
+        .qb:hover{border-color:${C.accent}!important;background:${C.surface2}!important;}
+        .dbtn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,85,255,0.35);}
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px}
+      `}</style>
+
+      {/* NAV */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",height:"52px",background:"rgba(5,8,13,0.96)",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:30,height:30,borderRadius:8,background:`linear-gradient(135deg,${C.accent2},${C.accent})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:14,color:"#fff",boxShadow:`0 0 16px rgba(0,85,255,0.45)`}}>A</div>
+          <span style={{fontWeight:700,fontSize:16,letterSpacing:-0.3}}>Archi <span style={{color:C.accent}}>Copilot</span></span>
+          <span style={{fontSize:9,fontWeight:700,letterSpacing:1,padding:"2px 7px",borderRadius:20,background:`linear-gradient(90deg,${C.accent2},${C.accent})`,color:"#fff"}}>BETA</span>
+        </div>
+        <div style={{fontSize:12,color:C.muted2,display:"flex",alignItems:"center",gap:6}}>
+          <span style={{width:7,height:7,borderRadius:"50%",background:C.accent3,display:"inline-block",boxShadow:`0 0 6px ${C.accent3}`}}/>
+          Connected · ESDS eNlight Cloud · Mumbai
+        </div>
+      </div>
+
+      {/* BODY */}
+      <div style={{display:"grid",gridTemplateColumns:"210px 1fr",flex:1,overflow:"hidden"}}>
+
+        {/* SIDEBAR */}
+        <div style={{background:C.surface,borderRight:`1px solid ${C.border}`,padding:"12px 10px",overflowY:"auto",display:"flex",flexDirection:"column",gap:3}}>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:C.muted,margin:"4px 4px 8px"}}>Quick Scenarios</div>
+          {SCENARIOS.map((sc,i)=>(
+            <button key={i} className="sc" onClick={()=>sendMessage(sc.prompt)}
+              style={{display:"flex",alignItems:"flex-start",gap:9,padding:"10px 11px",borderRadius:10,border:`1px solid transparent`,cursor:"pointer",background:"transparent",color:C.text,fontFamily:"inherit",textAlign:"left",width:"100%",transition:"all .15s",marginBottom:2}}>
+              <span style={{fontSize:20,flexShrink:0}}>{sc.icon}</span>
+              <div>
+                <div style={{fontSize:12,fontWeight:600,marginBottom:2}}>{sc.title}</div>
+                <div style={{fontSize:10,color:C.muted,lineHeight:1.4}}>{sc.sub}</div>
+              </div>
+            </button>
+          ))}
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:C.muted,margin:"14px 4px 8px"}}>Compliance</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5,padding:"0 4px"}}>
+            {["RBI IT","DPDP Act","MeitY","ABDM","ISO 27001","SOC 2","SEBI","HL7 FHIR"].map(c=>(
+              <span key={c} style={{fontSize:9,fontWeight:700,padding:"3px 7px",borderRadius:4,border:`1px solid ${C.accent}`,color:C.accent,background:"rgba(0,212,255,0.06)"}}>{c}</span>
+            ))}
+          </div>
+          <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:C.muted,margin:"14px 4px 8px",marginTop:"auto"}}>Account</div>
+          <div style={{fontSize:11,color:C.muted2,lineHeight:2,padding:"0 4px"}}>
+            <div>Plan: <span style={{color:C.text}}>eNlight Pro</span></div>
+            <div>Primary: <span style={{color:C.text}}>Mumbai (Tier 4)</span></div>
+            <div>DR Site: <span style={{color:C.text}}>Chennai</span></div>
+            <div>Budget: <span style={{color:C.accent3}}>₹4,80,000/mo</span></div>
+          </div>
+        </div>
+
+        {/* CHAT */}
+        <div style={{display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          <div ref={chatRef} style={{flex:1,overflowY:"auto",padding:"18px 22px",display:"flex",flexDirection:"column",gap:14}}>
+
+            {messages.length===0&&(
+              <div style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",padding:"32px 20px",gap:10,animation:"fadeUp .5s ease"}}>
+                <div style={{width:64,height:64,borderRadius:16,background:`linear-gradient(135deg,${C.accent2},${C.accent})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,boxShadow:`0 0 50px rgba(0,85,255,0.35)`}}>🤖</div>
+                <h2 style={{fontWeight:800,fontSize:22,letterSpacing:-0.5,margin:0}}>Hi, I'm Archi.</h2>
+                <p style={{fontSize:13,color:C.muted2,maxWidth:400,lineHeight:1.65,margin:0}}>
+                  Describe any cloud requirement in plain English — I'll generate a <b style={{color:C.accent}}>live visual architecture diagram</b>, ₹ cost estimate, and compliance check. Powered by real AI.
+                </p>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,maxWidth:460,marginTop:8}}>
+                  {[
+                    {i:"🌐",t:"3-tier HA web app on ESDS cloud"},
+                    {i:"🏦",t:"Banking DR, RTO 15 mins, RBI compliant"},
+                    {i:"🔍",t:"Debug API slowdown on my ESDS setup"},
+                    {i:"💰",t:"Cost estimate for HMS, 50 users"},
+                  ].map((q,i)=>(
+                    <button key={i} className="qb" onClick={()=>sendMessage(`Design: ${q.t}`)}
+                      style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",color:C.text,cursor:"pointer",fontSize:11,textAlign:"left",fontFamily:"inherit",lineHeight:1.45,transition:"all .15s"}}>
+                      <span style={{fontSize:17,display:"block",marginBottom:5}}>{q.i}</span>{q.t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map((m,i)=>(
+              <div key={i} style={{animation:"fadeUp .25s ease"}}>
+                {m.role==="user"?(
+                  <div style={{display:"flex",justifyContent:"flex-end"}}>
+                    <div style={{maxWidth:"70%",padding:"11px 15px",borderRadius:12,background:`linear-gradient(135deg,${C.accent2},#003fbb)`,fontSize:13,lineHeight:1.6,borderTopRightRadius:3}}>{m.text}</div>
+                  </div>
+                ):(
+                  <div style={{display:"flex",gap:9}}>
+                    <div style={{width:28,height:28,borderRadius:8,background:`linear-gradient(135deg,${C.accent2},${C.accent})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:12,color:"#fff",flexShrink:0}}>A</div>
+                    {m.error?(
+                      <div style={{padding:"12px 15px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,borderTopLeftRadius:3,fontSize:13,color:C.red}}>
+                        ⚠ Error: {m.error}<br/><span style={{fontSize:11,color:C.muted}}>Check network or try again.</span>
+                      </div>
+                    ):(
+                      <div style={{maxWidth:"90%",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,borderTopLeftRadius:3,overflow:"hidden"}}>
+                        {/* Summary */}
+                        <div style={{padding:"13px 15px",fontSize:13,lineHeight:1.65,borderBottom:`1px solid ${C.border}`}}>{m.result.summary}</div>
+                        {/* Diagram header */}
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 14px",borderBottom:`1px solid ${C.border}`,background:C.surface3}}>
+                          <span style={{fontSize:10,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:C.accent}}>🏗️ Architecture Diagram</span>
+                          <button className="dbtn" style={{fontSize:10,padding:"4px 12px",borderRadius:6,border:"none",background:`linear-gradient(135deg,${C.accent2},${C.accent})`,color:"#fff",cursor:"pointer",fontFamily:"inherit",fontWeight:600,transition:"all .15s"}}>🚀 Deploy to eNlight</button>
+                        </div>
+                        {/* SVG DIAGRAM */}
+                        <div style={{padding:"14px 12px",background:C.surface2}}>
+                          <ArchDiagram type={m.result.diagram_type}/>
+                        </div>
+                        {/* Cost row */}
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",borderTop:`1px solid ${C.border}`}}>
+                          {[
+                            {v:m.result.cost_total,l:"Total / month",c:C.accent3},
+                            {v:m.result.rto,l:"RTO",c:C.accent},
+                            {v:"✓ India",l:"Data Residency",c:C.accent3},
+                          ].map((ci,ii)=>(
+                            <div key={ii} style={{padding:"10px 12px",textAlign:"center",borderRight:ii<2?`1px solid ${C.border}`:"none"}}>
+                              <div style={{fontWeight:700,fontSize:15,color:ci.c}}>{ci.v}</div>
+                              <div style={{fontSize:10,color:C.muted,marginTop:2}}>{ci.l}</div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Compliance */}
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5,padding:"10px 14px",borderTop:`1px solid ${C.border}`}}>
+                          {(m.result.compliance||[]).map(c=>(
+                            <span key={c} style={{fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:5,background:"rgba(0,255,170,0.1)",border:`1px solid ${C.accent3}`,color:C.accent3}}>✓ {c}</span>
+                          ))}
+                        </div>
+                        {/* Components */}
+                        {m.result.components?.length>0&&(
+                          <div style={{padding:"10px 14px",borderTop:`1px solid ${C.border}`}}>
+                            <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:6}}>Key Components</div>
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {m.result.components.map(c=>(
+                                <span key={c} style={{fontSize:11,padding:"2px 8px",borderRadius:5,background:C.surface3,border:`1px solid ${C.border}`,color:C.muted2}}>{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {/* ESDS edge */}
+                        {m.result.esds_edge&&(
+                          <div style={{margin:"0 14px 0",padding:"9px 12px",borderLeft:`3px solid ${C.accent2}`,background:"rgba(0,85,255,0.06)",borderRadius:"0 6px 6px 0",fontSize:12,color:C.muted2,borderTop:`1px solid ${C.border}`}}>
+                            <b style={{color:C.accent2}}>ESDS Advantage: </b>{m.result.esds_edge}
+                          </div>
+                        )}
+                        {m.result.next_step&&(
+                          <div style={{padding:"9px 15px 13px",fontSize:12,color:C.muted2}}>
+                            <b style={{color:C.text}}>Next Step: </b>{m.result.next_step}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {loading&&(
+              <div style={{display:"flex",gap:9,animation:"fadeUp .25s ease"}}>
+                <div style={{width:28,height:28,borderRadius:8,background:`linear-gradient(135deg,${C.accent2},${C.accent})`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:12,color:"#fff",flexShrink:0}}>A</div>
+                <div style={{padding:"13px 18px",background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,borderTopLeftRadius:3,display:"flex",alignItems:"center",gap:4}}>
+                  <span className="d0" style={{width:7,height:7,borderRadius:"50%",background:C.muted,display:"inline-block"}}/>
+                  <span className="d1" style={{width:7,height:7,borderRadius:"50%",background:C.muted,display:"inline-block"}}/>
+                  <span className="d2" style={{width:7,height:7,borderRadius:"50%",background:C.muted,display:"inline-block"}}/>
+                  <span style={{fontSize:12,color:C.muted,marginLeft:8}}>Generating architecture…</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* INPUT */}
+          <div style={{padding:"12px 18px 16px",borderTop:`1px solid ${C.border}`,background:C.bg,flexShrink:0}}>
+            <div style={{display:"flex",gap:9,alignItems:"flex-end",background:C.surface,border:`1px solid ${C.border}`,borderRadius:13,padding:"10px 13px"}}>
+              <textarea
+                style={{flex:1,background:"transparent",border:"none",outline:"none",color:C.text,fontFamily:"inherit",fontSize:13,resize:"none",minHeight:20,maxHeight:80,lineHeight:1.5}}
+                placeholder="Describe your infrastructure… e.g. 'Design a payment gateway with PCI-DSS compliance on ESDS'"
+                value={input}
+                onChange={e=>setInput(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}}}
+                rows={1}
+              />
+              <button onClick={()=>sendMessage()} disabled={loading}
+                style={{width:34,height:34,borderRadius:8,border:"none",background:loading?"#1c2f48":`linear-gradient(135deg,${C.accent2},${C.accent})`,color:"#fff",cursor:loading?"not-allowed":"pointer",fontSize:16,flexShrink:0,opacity:loading?0.5:1}}>
+                ➤
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
