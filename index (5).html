@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archi — AI Infrastructure Copilot | ESDS</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05080d;--s1:#0b1220;--s2:#0f1a2e;--s3:#142038;
+  --br:#1c2f48;--ac:#00d4ff;--ac2:#0055ff;--ac3:#00ffaa;
+  --am:#ffb84d;--rd:#ff4d6d;--tx:#ddeeff;--mt:#4d6b88;--mt2:#7a99bb;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--tx);font-family:'Instrument Sans',sans-serif;}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.025) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0;}
+
+/* ── LOGIN SCREEN ── */
+#loginScreen{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+}
+.login-card{
+  width:420px;padding:40px;
+  background:var(--s1);border:1px solid var(--br);border-radius:20px;
+  box-shadow:0 0 80px rgba(0,85,255,0.15);
+  position:relative;z-index:1;
+}
+.login-logo{
+  width:56px;height:56px;border-radius:14px;
+  background:linear-gradient(135deg,var(--ac2),var(--ac));
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Syne',sans-serif;font-weight:800;font-size:24px;color:#fff;
+  margin:0 auto 20px;box-shadow:0 0 40px rgba(0,85,255,0.4);
+}
+.login-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px;}
+.login-sub{font-size:12px;color:var(--mt2);text-align:center;margin-bottom:28px;}
+.login-label{font-size:11px;font-weight:600;color:var(--mt2);letter-spacing:.5px;margin-bottom:6px;display:block;}
+.login-input{
+  width:100%;padding:11px 14px;border-radius:10px;
+  background:var(--s2);border:1px solid var(--br);
+  color:var(--tx);font-family:'Instrument Sans',sans-serif;font-size:13px;
+  outline:none;transition:border-color .2s;margin-bottom:14px;
+}
+.login-input:focus{border-color:var(--ac);}
+.login-input::placeholder{color:var(--mt);}
+.login-btn{
+  width:100%;padding:12px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,var(--ac2),var(--ac));
+  color:#fff;font-family:'Instrument Sans',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;
+  transition:all .2s;margin-top:4px;
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,85,255,0.4);}
+.login-err{font-size:11px;color:var(--rd);text-align:center;margin-top:10px;min-height:16px;}
+.login-hint{font-size:10px;color:var(--mt);text-align:center;margin-top:16px;line-height:1.6;padding:10px;background:var(--s2);border-radius:8px;border:1px solid var(--br);}
+.login-hint b{color:var(--ac3);}
+
+/* ── MAIN APP ── */
+#app{display:none;flex-direction:column;height:100vh;position:relative;z-index:1;}
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:52px;
+  background:rgba(5,8,13,0.96);border-bottom:1px solid var(--br);flex-shrink:0;
+}
+.nav-brand{display:flex;align-items:center;gap:8px;}
+.nav-logo{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;color:#fff;box-shadow:0 0 16px rgba(0,85,255,0.45);}
+.nav-name{font-weight:700;font-size:16px;letter-spacing:-0.3px;}
+.nav-name span{color:var(--ac);}
+.nav-tag{font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 7px;border-radius:20px;background:linear-gradient(90deg,var(--ac2),var(--ac));color:#fff;}
+.nav-right{font-size:12px;color:var(--mt2);display:flex;align-items:center;gap:8px;}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--ac3);display:inline-block;animation:pulse 2s infinite;box-shadow:0 0 6px var(--ac3);}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+.nav-logout{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--br);background:transparent;color:var(--mt2);cursor:pointer;font-family:inherit;transition:all .15s;}
+.nav-logout:hover{border-color:var(--rd);color:var(--rd);}
+
+.layout{display:grid;grid-template-columns:210px 1fr;flex:1;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{background:var(--s1);border-right:1px solid var(--br);padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:3px;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--br);}
+.sec-lbl{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--mt);margin:14px 4px 8px;}
+.sec-lbl:first-child{margin-top:0;}
+.sc-btn{display:flex;align-items:flex-start;gap:9px;padding:10px 11px;border-radius:10px;border:1px solid transparent;cursor:pointer;background:transparent;color:var(--tx);font-family:inherit;text-align:left;width:100%;transition:all .15s;margin-bottom:2px;}
+.sc-btn:hover{background:var(--s2);border-color:var(--br);}
+.sc-icon{font-size:20px;flex-shrink:0;}
+.sc-title{font-size:12px;font-weight:600;display:block;margin-bottom:2px;}
+.sc-sub{font-size:10px;color:var(--mt);display:block;line-height:1.4;}
+.chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 4px;}
+.chip{font-size:9px;font-weight:700;padding:3px 7px;border-radius:4px;border:1px solid var(--ac);color:var(--ac);background:rgba(0,212,255,0.06);}
+.acct{font-size:11px;color:var(--mt2);line-height:2;padding:0 4px;}
+.acct span{color:var(--tx);}
+.acct .val{color:var(--ac3);}
+
+/* MAIN */
+.main{display:flex;flex-direction:column;overflow:hidden;}
+.chat{flex:1;overflow-y:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px;}
+.chat::-webkit-scrollbar{width:4px;}
+.chat::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px;}
+
+/* Welcome */
+.welcome{display:flex;flex-direction:column;align-items:center;text-align:center;padding:32px 20px;gap:10px;animation:fadeUp .5s ease;}
+.welcome-orb{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 50px rgba(0,85,255,0.35);}
+.welcome h2{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;}
+.welcome p{font-size:13px;color:var(--mt2);max-width:420px;line-height:1.65;}
+.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;max-width:460px;margin-top:8px;}
+.qbtn{background:var(--s1);border:1px solid var(--br);border-radius:10px;padding:11px 13px;color:var(--tx);cursor:pointer;font-size:11px;text-align:left;font-family:inherit;line-height:1.45;transition:all .15s;}
+.qbtn:hover{border-color:var(--ac);background:var(--s2);}
+.qi{font-size:17px;display:block;margin-bottom:5px;}
+
+/* Messages */
+.msg{display:flex;gap:9px;animation:fadeUp .25s ease;}
+.msg.user{justify-content:flex-end;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.avatar{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--ac2),var(--ac));display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:12px;color:#fff;flex-shrink:0;}
+.bubble-user{max-width:70%;padding:11px 15px;border-radius:12px;border-top-right-radius:3px;background:linear-gradient(135deg,var(--ac2),#003fbb);font-size:13px;line-height:1.6;}
+.bubble-archi{max-width:90%;background:var(--s1);border:1px solid var(--br);border-radius:12px;border-top-left-radius:3px;overflow:hidden;}
+.bubble-err{padding:12px 15px;font-size:13px;color:var(--rd);}
+.b-summary{padding:13px 15px;font-size:13px;line-height:1.65;border-bottom:1px solid var(--br);}
+
+/* Diagram */
+.diag-hdr{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--br);background:var(--s3);}
+.diag-title{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--ac);}
+.deploy-btn{font-size:10px;padding:4px 12px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--ac2),var(--ac));color:#fff;cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s;}
+.deploy-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,85,255,.35);}
+.diag-wrap{padding:14px 12px;background:var(--s2);}
+
+/* Cost row */
+.cost-row{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--br);}
+.cost-item{padding:10px 12px;text-align:center;border-right:1px solid var(--br);}
+.cost-item:last-child{border-right:none;}
+.cost-val{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--ac3);}
+.cost-lbl{font-size:10px;color:var(--mt);margin-top:2px;}
+
+.chip-row{display:flex;flex-wrap:wrap;gap:5px;padding:10px 14px;border-top:1px solid var(--br);}
+.g-chip{font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;background:rgba(0,255,170,0.1);border:1px solid var(--ac3);color:var(--ac3);}
+.comps-row{padding:10px 14px;border-top:1px solid var(--br);}
+.comp-tag{font-size:11px;padding:2px 8px;border-radius:5px;background:var(--s3);border:1px solid var(--br);color:var(--mt2);display:inline-block;margin:2px;}
+.esds-bar{padding:9px 15px;border-top:1px solid var(--br);border-left:3px solid var(--ac2);font-size:12px;color:var(--mt2);}
+.esds-bar b{color:var(--ac2);}
+.next-bar{padding:9px 15px 13px;font-size:12px;color:var(--mt2);}
+.next-bar b{color:var(--tx);}
+
+/* Typing */
+.typing{display:flex;align-items:center;gap:4px;padding:13px 18px;}
+.typing span{width:7px;height:7px;border-radius:50%;background:var(--mt);display:inline-block;}
+.typing span:nth-child(1){animation:bob 1.2s infinite;}
+.typing span:nth-child(2){animation:bob 1.2s .2s infinite;}
+.typing span:nth-child(3){animation:bob 1.2s .4s infinite;}
+.typing em{font-style:normal;font-size:12px;color:var(--mt);margin-left:8px;}
+@keyframes bob{0%,60%,100%{transform:translateY(0);opacity:.3;}30%{transform:translateY(-6px);opacity:1;}}
+
+/* Input */
+.input-zone{padding:12px 18px 16px;border-top:1px solid var(--br);background:var(--bg);flex-shrink:0;}
+.input-wrap{display:flex;gap:9px;align-items:flex-end;background:var(--s1);border:1px solid var(--br);border-radius:13px;padding:10px 13px;transition:border-color .2s;}
+.input-wrap:focus-within{border-color:var(--ac);}
+#msgInput{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-family:inherit;font-size:13px;resize:none;min-height:20px;max-height:80px;line-height:1.5;}
+#msgInput::placeholder{color:var(--mt);}
+.send-btn{width:34px;height:34px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--ac2),var(--ac));color:#fff;cursor:pointer;font-size:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.send-btn:hover{transform:scale(1.08);box-shadow:0 0 16px rgba(0,212,255,.3);}
+.send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">A</div>
+    <div class="login-title">Archi Copilot</div>
+    <div class="login-sub">AI Infrastructure Copilot · ESDS Internal Tool</div>
+
+    <label class="login-label">TEAM PASSWORD</label>
+    <input class="login-input" type="password" id="passInput" placeholder="Enter team password" onkeydown="if(event.key==='Enter') doLogin()"/>
+
+    <label class="login-label">ANTHROPIC API KEY</label>
+    <input class="login-input" type="password" id="keyInput" placeholder="sk-ant-..." onkeydown="if(event.key==='Enter') doLogin()"/>
+
+    <button class="login-btn" onclick="doLogin()">Access Archi →</button>
+    <div class="login-err" id="loginErr"></div>
+
+    <div class="login-hint">
+      <b>For ESDS team only.</b> Ask your solution architect for the team password.<br>
+      API key is never stored — only kept in memory for this session.
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     MAIN APP
+═══════════════════════════════════════════ -->
+<div id="app">
+  <nav>
+    <div class="nav-brand">
+      <div class="nav-logo">A</div>
+      <span class="nav-name">Archi <span>Copilot</span></span>
+      <span class="nav-tag">ESDS BETA</span>
+    </div>
+    <div class="nav-right">
+      <span class="pulse"></span>
+      <span>Connected · eNlight Cloud · Mumbai</span>
+      <button class="nav-logout" onclick="logout()">⏻ Logout</button>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sec-lbl" style="margin-top:0">Quick Scenarios</div>
+
+      <button class="sc-btn" onclick="quick('Design a disaster recovery architecture for a core banking app. RTO 15 mins, RPO near-zero, RBI IT Framework compliant, primary Mumbai, DR Chennai.')">
+        <span class="sc-icon">🏦</span>
+        <div><span class="sc-title">BFSI Core Banking DR</span><span class="sc-sub">RBI-compliant failover</span></div>
+      </button>
+      <button class="sc-btn" onclick="quick('Design e-commerce architecture to handle 50x traffic spike during Diwali sale with CDN, auto-scaling, cost optimization on ESDS.')">
+        <span class="sc-icon">🛒</span>
+        <div><span class="sc-title">E-Commerce Auto-Scale</span><span class="sc-sub">50x Diwali traffic burst</span></div>
+      </button>
+      <button class="sc-btn" onclick="quick('Design an ABDM-compliant hospital management system on ESDS. HL7 FHIR R4, data in India, HIPAA, 50 concurrent users.')">
+        <span class="sc-icon">🏥</span>
+        <div><span class="sc-title">Healthcare / ABDM</span><span class="sc-sub">ABDM + HIPAA compliant</span></div>
+      </button>
+      <button class="sc-btn" onclick="quick('Design edge plus cloud architecture for smart city IoT. 500,000 sensors, real-time analytics, low latency edge in tier-2 cities.')">
+        <span class="sc-icon">🏙️</span>
+        <div><span class="sc-title">Smart City IoT Edge</span><span class="sc-sub">500K devices, edge+cloud</span></div>
+      </button>
+      <button class="sc-btn" onclick="quick('Design a MeitY empanelled sovereign cloud for a government department. Dedicated tenancy, HSM encryption, data in India, GI Cloud compatible.')">
+        <span class="sc-icon">🏛️</span>
+        <div><span class="sc-title">Govt Sovereign Cloud</span><span class="sc-sub">MeitY + GI Cloud ready</span></div>
+      </button>
+
+      <div class="sec-lbl">Compliance</div>
+      <div class="chips">
+        <span class="chip">RBI IT</span><span class="chip">DPDP Act</span>
+        <span class="chip">MeitY</span><span class="chip">ABDM</span>
+        <span class="chip">ISO 27001</span><span class="chip">SOC 2</span>
+        <span class="chip">SEBI</span><span class="chip">HL7 FHIR</span>
+      </div>
+
+      <div class="sec-lbl" style="margin-top:auto">Account</div>
+      <div class="acct">
+        <div>Plan: <span>eNlight Pro</span></div>
+        <div>Primary: <span>Mumbai (Tier 4)</span></div>
+        <div>DR Site: <span>Chennai</span></div>
+        <div>Budget: <span class="val">₹4,80,000/mo</span></div>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT -->
+    <main class="main">
+      <div class="chat" id="chat">
+        <div class="welcome" id="welcome">
+          <div class="welcome-orb">🤖</div>
+          <h2>Hi, I'm Archi.</h2>
+          <p>Describe any cloud requirement in plain English — I'll generate a <b style="color:var(--ac)">live visual architecture diagram</b>, ₹ cost estimate, and Indian compliance check.</p>
+          <div class="qgrid">
+            <button class="qbtn" onclick="quick('Design a 3-tier high availability web application on ESDS cloud with load balancing, auto scaling, managed database and CDN.')">
+              <span class="qi">🌐</span>3-tier HA web app on ESDS
+            </button>
+            <button class="qbtn" onclick="quick('Design a banking DR setup with RTO 15 minutes, RBI compliant, primary Mumbai, DR Chennai.')">
+              <span class="qi">🏦</span>Banking DR — RTO 15 mins
+            </button>
+            <button class="qbtn" onclick="quick('My application response time went from 200ms to 3 seconds since yesterday. Help me diagnose the performance issue.')">
+              <span class="qi">🔍</span>Debug API slowdown
+            </button>
+            <button class="qbtn" onclick="quick('Estimate monthly cost for an ABDM compliant hospital management system with 50 concurrent users and 5TB storage.')">
+              <span class="qi">💰</span>HMS cost estimate
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-zone">
+        <div class="input-wrap">
+          <textarea id="msgInput" rows="1"
+            placeholder="Describe your infrastructure requirement… e.g. 'Design a payment gateway with PCI-DSS on ESDS'"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG — Change these for your team
+// ═══════════════════════════════════════════
+const TEAM_PASSWORD = 'esds@archi2025';   // ← Change this password
+// ═══════════════════════════════════════════
+
+let API_KEY = '';
+let busy = false;
+
+// ── LOGIN ──
+function doLogin() {
+  const pass = document.getElementById('passInput').value.trim();
+  const key  = document.getElementById('keyInput').value.trim();
+  const err  = document.getElementById('loginErr');
+
+  if (pass !== TEAM_PASSWORD) {
+    err.textContent = '✗ Wrong password. Contact your solution architect.';
+    document.getElementById('passInput').style.borderColor = 'var(--rd)';
+    return;
+  }
+  if (!key.startsWith('sk-ant-')) {
+    err.textContent = '✗ Invalid API key format. Should start with sk-ant-';
+    document.getElementById('keyInput').style.borderColor = 'var(--rd)';
+    return;
+  }
+
+  API_KEY = key;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+
+function logout() {
+  API_KEY = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('passInput').value = '';
+  document.getElementById('keyInput').value = '';
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('chat').innerHTML = '';
+  document.getElementById('chat').appendChild(createWelcome());
+}
+
+// ── SVG DIAGRAMS ──
+const C = {
+  bg:'#05080d',s1:'#0b1220',s2:'#0f1a2e',s3:'#142038',
+  br:'#1c2f48',ac:'#00d4ff',ac2:'#0055ff',ac3:'#00ffaa',
+  am:'#ffb84d',tx:'#ddeeff',mt:'#4d6b88'
+};
+
+const DIAGS = {
+  bfsi_dr:{
+    nodes:[
+      {id:'internet',x:10, y:130,w:85, h:42,label:'Internet',     icon:'🌐',sub:'Users',            col:C.mt },
+      {id:'waf',     x:115,y:130,w:95, h:42,label:'WAF/DDoS',     icon:'🛡️',sub:'Protection',       col:C.am },
+      {id:'lb_p',    x:230,y:70, w:110,h:42,label:'Load Balancer', icon:'⚖️',sub:'Mumbai Primary',   col:C.ac },
+      {id:'lb_dr',   x:230,y:200,w:110,h:42,label:'Standby LB',   icon:'⚖️',sub:'Chennai DR',       col:C.mt },
+      {id:'app_p',   x:365,y:50, w:110,h:42,label:'App Cluster ×3',icon:'⚙️',sub:'Active',          col:C.ac },
+      {id:'app_dr',  x:365,y:185,w:110,h:42,label:'App Cluster ×2',icon:'⚙️',sub:'Warm Standby',    col:C.mt },
+      {id:'db_p',    x:365,y:110,w:110,h:42,label:'DB Primary',   icon:'🗄️',sub:'PostgreSQL HA',    col:C.ac3},
+      {id:'db_dr',   x:365,y:240,w:110,h:42,label:'DB Replica',   icon:'🗄️',sub:'Sync Replication', col:C.mt },
+      {id:'rto',     x:505,y:143,w:115,h:42,label:'RTO: 12 min',  icon:'⚡',sub:'RPO: ~0 sec',      col:C.ac3},
+    ],
+    edges:[
+      {f:'internet',t:'waf',solid:1},{f:'waf',t:'lb_p',solid:1},{f:'waf',t:'lb_dr'},
+      {f:'lb_p',t:'app_p',solid:1},{f:'lb_dr',t:'app_dr'},{f:'app_p',t:'db_p',solid:1},
+      {f:'app_dr',t:'db_dr'},{f:'db_p',t:'db_dr',label:'SYNC REPL',col:C.ac3,solid:1},
+      {f:'lb_p',t:'lb_dr',label:'Failover',col:C.am},{f:'db_p',t:'rto'},
+    ]
+  },
+  ecommerce:{
+    nodes:[
+      {id:'cdn',  x:10, y:125,w:90, h:42,label:'CDN Edge',    icon:'🌍',sub:'Cache 85%',         col:C.am },
+      {id:'lb',   x:125,y:125,w:100,h:42,label:'Smart LB',    icon:'⚖️',sub:'eNlight',            col:C.ac },
+      {id:'app',  x:255,y:55, w:115,h:42,label:'App Nodes',   icon:'⚙️',sub:'4→200 auto',        col:C.ac },
+      {id:'api',  x:255,y:125,w:115,h:42,label:'API Gateway', icon:'🔌',sub:'2→80 auto',         col:C.ac2},
+      {id:'cache',x:255,y:195,w:115,h:42,label:'Redis Cache', icon:'⚡',sub:'×6 cluster',         col:C.ac3},
+      {id:'db',   x:400,y:88, w:115,h:42,label:'DB+Replicas', icon:'🗄️',sub:'×12 read replicas', col:C.ac3},
+      {id:'queue',x:400,y:168,w:115,h:42,label:'Msg Queue',   icon:'📨',sub:'RabbitMQ HA',        col:C.am },
+      {id:'scale',x:542,y:125,w:108,h:42,label:'90s Scale-Up',icon:'📈',sub:'CPU>60% trigger',   col:C.ac3},
+    ],
+    edges:[
+      {f:'cdn',t:'lb',solid:1},{f:'lb',t:'app',solid:1},{f:'lb',t:'api',solid:1},
+      {f:'lb',t:'cache'},{f:'app',t:'db',solid:1},{f:'api',t:'db'},{f:'api',t:'queue'},
+      {f:'app',t:'cache'},{f:'app',t:'scale',label:'triggers',col:C.ac3},
+    ]
+  },
+  healthcare:{
+    nodes:[
+      {id:'user', x:10, y:125,w:90, h:42,label:'Clinicians',   icon:'👨‍⚕️',sub:'Web/Mobile',     col:C.mt },
+      {id:'abdm', x:125,y:55, w:110,h:42,label:'ABDM Gateway', icon:'🏥', sub:'HL7 FHIR R4',    col:C.ac3},
+      {id:'api',  x:125,y:125,w:110,h:42,label:'API Layer',    icon:'🔌', sub:'mTLS encrypted',  col:C.ac },
+      {id:'auth', x:125,y:195,w:110,h:42,label:'Auth/IAM',     icon:'🔐', sub:'Keycloak HA',     col:C.am },
+      {id:'hms',  x:268,y:88, w:115,h:42,label:'HMS Services', icon:'⚙️', sub:'Microservices',   col:C.ac },
+      {id:'fhir', x:268,y:172,w:115,h:42,label:'FHIR Store',   icon:'📋', sub:'Patient records', col:C.ac3},
+      {id:'db',   x:415,y:88, w:112,h:42,label:'Encrypted DB', icon:'🗄️', sub:'AES-256 at rest', col:C.ac3},
+      {id:'audit',x:415,y:172,w:112,h:42,label:'Audit Trail',  icon:'📜', sub:'Immutable logs',  col:C.am },
+      {id:'vault',x:555,y:125,w:90, h:42,label:'Backup Vault', icon:'💾', sub:'7-yr retention',  col:C.mt },
+    ],
+    edges:[
+      {f:'user',t:'api',solid:1},{f:'user',t:'abdm'},{f:'abdm',t:'hms',solid:1},
+      {f:'api',t:'hms',solid:1},{f:'api',t:'auth'},{f:'hms',t:'db',solid:1},
+      {f:'hms',t:'fhir',solid:1},{f:'fhir',t:'audit',label:'log',col:C.am},
+      {f:'db',t:'vault'},{f:'audit',t:'vault'},
+    ]
+  },
+  smartcity:{
+    nodes:[
+      {id:'sensors',x:10, y:125,w:95, h:42,label:'IoT Sensors',    icon:'📡',sub:'500K devices',    col:C.mt },
+      {id:'gw',     x:130,y:125,w:95, h:42,label:'Edge Gateway',   icon:'🔲',sub:'<5ms latency',    col:C.am },
+      {id:'edge',   x:255,y:55, w:105,h:42,label:'Edge DC Node',   icon:'🏗️',sub:'Tier-2 cities',   col:C.am },
+      {id:'mqtt',   x:255,y:125,w:105,h:42,label:'MQTT Broker',    icon:'📨',sub:'Event stream',     col:C.ac2},
+      {id:'proc',   x:255,y:195,w:105,h:42,label:'Local Analytics',icon:'🧠',sub:'Real-time alerts', col:C.ac },
+      {id:'cloud',  x:392,y:88, w:115,h:42,label:'ESDS Mumbai',    icon:'☁️',sub:'Core cloud',       col:C.ac },
+      {id:'tsdb',   x:392,y:168,w:115,h:42,label:'Time-Series DB', icon:'📊',sub:'InfluxDB cluster', col:C.ac3},
+      {id:'dash',   x:535,y:125,w:108,h:42,label:'City Dashboard', icon:'🖥️',sub:'Command centre',   col:C.ac3},
+    ],
+    edges:[
+      {f:'sensors',t:'gw',solid:1},{f:'gw',t:'edge',solid:1},{f:'gw',t:'mqtt',solid:1},
+      {f:'edge',t:'cloud',label:'aggregate',col:C.ac},{f:'mqtt',t:'proc'},
+      {f:'mqtt',t:'cloud',solid:1},{f:'cloud',t:'tsdb',solid:1},{f:'tsdb',t:'dash',solid:1},
+      {f:'proc',t:'dash',label:'alerts',col:C.am},
+    ]
+  },
+  govt:{
+    nodes:[
+      {id:'users',x:10, y:125,w:90, h:42,label:'Govt Users',   icon:'🏛️',sub:'VPN/NIC Net',       col:C.mt },
+      {id:'vpn',  x:125,y:125,w:100,h:42,label:'Dedicated VPN',icon:'🔒',sub:'Encrypted tunnel',   col:C.am },
+      {id:'iam',  x:255,y:55, w:110,h:42,label:'MeitY IAM',    icon:'🔐',sub:'Role-based access',  col:C.am },
+      {id:'app',  x:255,y:125,w:110,h:42,label:'Govt App Tier',icon:'⚙️',sub:'Dedicated tenant',   col:C.ac },
+      {id:'hsm',  x:255,y:195,w:110,h:42,label:'HSM Encrypt',  icon:'🔑',sub:'In-country keys',    col:C.ac3},
+      {id:'db',   x:398,y:88, w:110,h:42,label:'Sovereign DB', icon:'🗄️',sub:'Air-gapped option',  col:C.ac3},
+      {id:'audit',x:398,y:172,w:110,h:42,label:'CISO Audit',   icon:'📜',sub:'Immutable+STQC',     col:C.am },
+      {id:'vault',x:538,y:125,w:100,h:42,label:'Secure Vault', icon:'💾',sub:'India-only backup',   col:C.mt },
+    ],
+    edges:[
+      {f:'users',t:'vpn',solid:1},{f:'vpn',t:'iam',solid:1},{f:'vpn',t:'app',solid:1},
+      {f:'iam',t:'app'},{f:'app',t:'hsm',solid:1},{f:'app',t:'db',solid:1},
+      {f:'hsm',t:'db',label:'encrypt',col:C.ac3,solid:1},
+      {f:'db',t:'audit',label:'log all',col:C.am},{f:'db',t:'vault'},{f:'audit',t:'vault'},
+    ]
+  },
+  generic:{
+    nodes:[
+      {id:'users',x:10, y:125,w:85, h:42,label:'Users',        icon:'👤',sub:'Web/Mobile',        col:C.mt },
+      {id:'cdn',  x:120,y:60, w:95, h:42,label:'CDN',          icon:'🌍',sub:'Edge cache',         col:C.am },
+      {id:'lb',   x:120,y:125,w:95, h:42,label:'Load Balancer',icon:'⚖️',sub:'HA pair',            col:C.ac },
+      {id:'waf',  x:120,y:195,w:95, h:42,label:'WAF',          icon:'🛡️',sub:'DDoS protect',       col:C.am },
+      {id:'app',  x:250,y:88, w:115,h:42,label:'App Servers',  icon:'⚙️',sub:'Auto-scale cluster', col:C.ac },
+      {id:'cache',x:250,y:175,w:115,h:42,label:'Cache Layer',  icon:'⚡',sub:'Redis HA',            col:C.ac3},
+      {id:'db',   x:400,y:88, w:110,h:42,label:'Database',     icon:'🗄️',sub:'Primary+replica',    col:C.ac3},
+      {id:'store',x:400,y:172,w:110,h:42,label:'Object Store', icon:'📦',sub:'S3-compatible',       col:C.ac2},
+      {id:'mon',  x:542,y:125,w:100,h:42,label:'Monitoring',   icon:'📊',sub:'NOC+Alerts',          col:C.mt },
+    ],
+    edges:[
+      {f:'users',t:'cdn',solid:1},{f:'users',t:'lb',solid:1},{f:'users',t:'waf'},
+      {f:'cdn',t:'app'},{f:'lb',t:'app',solid:1},{f:'waf',t:'app'},
+      {f:'app',t:'db',solid:1},{f:'app',t:'cache'},{f:'app',t:'store'},
+      {f:'db',t:'mon'},{f:'app',t:'mon'},
+    ]
+  }
+};
+
+function buildSVG(type) {
+  const d = DIAGS[type] || DIAGS.generic;
+  const W=660, H=310;
+  const nm={};
+  d.nodes.forEach(n => nm[n.id]=n);
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS,'svg');
+  svg.setAttribute('width','100%');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.style.display='block';
+
+  svg.innerHTML = `
+    <defs>
+      <marker id="ar"  markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="${C.ac}"  opacity=".75"/></marker>
+      <marker id="ar2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="${C.am}"  opacity=".85"/></marker>
+      <marker id="ar3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="${C.ac3}" opacity=".85"/></marker>
+      <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <rect width="${W}" height="${H}" fill="${C.s2}" rx="10"/>
+    ${Array.from({length:16},(_,i)=>`<line x1="${i*44}" y1="0" x2="${i*44}" y2="${H}" stroke="rgba(0,212,255,0.03)" stroke-width="1"/>`).join('')}
+    ${Array.from({length:8},(_,i)=>`<line x1="0" y1="${i*44}" x2="${W}" y2="${i*44}" stroke="rgba(0,212,255,0.03)" stroke-width="1"/>`).join('')}
+    ${d.edges.map(e=>{
+      const fn=nm[e.f],tn=nm[e.t]; if(!fn||!tn) return '';
+      const x1=fn.x+fn.w/2,y1=fn.y+fn.h/2,x2=tn.x+tn.w/2,y2=tn.y+tn.h/2;
+      const col=e.col||C.ac;
+      const mk=col===C.am?'url(#ar2)':col===C.ac3?'url(#ar3)':'url(#ar)';
+      const lx=(x1+x2)/2, ly=(y1+y2)/2-6;
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="1.5" opacity=".5" stroke-dasharray="${e.solid?'none':'6,4'}" marker-end="${mk}"/>
+              ${e.label?`<text x="${lx}" y="${ly}" text-anchor="middle" font-size="9" fill="${col}" opacity=".9" font-weight="600">${e.label}</text>`:''}`;
+    }).join('')}
+    ${d.nodes.map(n=>{
+      const col=n.col||C.ac2;
+      const ly1=n.y+n.h/2+(n.sub?-3:5);
+      const ly2=n.y+n.h/2+11;
+      return `<rect x="${n.x-3}" y="${n.y-3}" width="${n.w+6}" height="${n.h+6}" rx="12" fill="${col}" opacity=".08" filter="url(#glow)"/>
+              <rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="9" fill="${C.s3}" stroke="${col}" stroke-width="1.5"/>
+              <text x="${n.x+11}" y="${n.y+n.h/2+6}" font-size="14">${n.icon}</text>
+              <text x="${n.x+32}" y="${ly1}" font-size="11" font-weight="600" fill="${C.tx}">${n.label}</text>
+              ${n.sub?`<text x="${n.x+32}" y="${ly2}" font-size="9" fill="${C.mt}">${n.sub}</text>`:''}`;
+    }).join('')}
+  `;
+  return svg;
+}
+
+// ── AI CALL ──
+const SYSTEM = `You are Archi, AI Infrastructure Copilot for ESDS — India's sovereign cloud provider.
+ESDS has Tier 4 DCs in Mumbai and Chennai, eNlight auto-scaling, MeitY empanelled.
+
+Respond ONLY with raw JSON (no markdown, no backticks):
+{
+  "summary": "2-sentence plain English explanation",
+  "diagram_type": "bfsi_dr|ecommerce|healthcare|smartcity|govt|generic",
+  "components": ["c1","c2","c3","c4","c5"],
+  "cost_total": "₹X,XX,XXX/month",
+  "rto": "X minutes or N/A",
+  "compliance": ["s1","s2","s3"],
+  "esds_edge": "One sentence why ESDS wins here",
+  "next_step": "Recommended immediate action"
+}
+Diagram type: bfsi_dr=banking/RBI/DR, ecommerce=retail/traffic/scale, healthcare=hospital/ABDM/HIPAA, smartcity=IoT/edge/city, govt=government/MeitY/sovereign, generic=everything else.
+Costs in INR, realistic for ESDS (20-40% cheaper than hyperscalers).`;
+
+async function callAI(msg) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYSTEM,messages:[{role:'user',content:msg}]})
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const raw = data.content.map(c=>c.text||'').join('').trim().replace(/```json|```/g,'').trim();
+  return JSON.parse(raw);
+}
+
+// ── CHAT UI ──
+function createWelcome() {
+  const div = document.createElement('div');
+  div.className='welcome'; div.id='welcome';
+  div.innerHTML=`
+    <div class="welcome-orb">🤖</div>
+    <h2>Hi, I'm Archi.</h2>
+    <p>Describe any cloud requirement in plain English — I'll generate a <b style="color:var(--ac)">live visual architecture diagram</b>, ₹ cost estimate, and Indian compliance check.</p>
+    <div class="qgrid">
+      <button class="qbtn" onclick="quick('Design a 3-tier HA web app on ESDS cloud with load balancing, auto scaling and CDN.')"><span class="qi">🌐</span>3-tier HA web app</button>
+      <button class="qbtn" onclick="quick('Design a banking DR setup with RTO 15 minutes, RBI compliant, Mumbai primary, Chennai DR.')"><span class="qi">🏦</span>Banking DR — RTO 15 mins</button>
+      <button class="qbtn" onclick="quick('My API response time went from 200ms to 3 seconds since yesterday, help me diagnose.')"><span class="qi">🔍</span>Debug API slowdown</button>
+      <button class="qbtn" onclick="quick('Estimate cost for ABDM compliant hospital management system, 50 users, 5TB storage.')"><span class="qi">💰</span>HMS cost estimate</button>
+    </div>`;
+  return div;
+}
+
+function addMsg(role, content) {
+  document.getElementById('welcome')?.remove();
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  if (role === 'user') {
+    wrap.innerHTML = `<div class="bubble-user">${content}</div>`;
+  } else {
+    wrap.innerHTML = `<div class="avatar">A</div><div class="bubble-archi" id="bubble_${Date.now()}">${content}</div>`;
+  }
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+  return wrap;
+}
+
+function showTyping() {
+  const chat = document.getElementById('chat');
+  const wrap = document.createElement('div');
+  wrap.className='msg'; wrap.id='typing';
+  wrap.innerHTML=`<div class="avatar">A</div><div class="bubble-archi"><div class="typing"><span></span><span></span><span></span><em>Generating architecture…</em></div></div>`;
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMsg() {
+  if (busy) return;
+  const inp = document.getElementById('msgInput');
+  const text = inp.value.trim();
+  if (!text) return;
+
+  busy=true;
+  document.getElementById('sendBtn').disabled=true;
+  inp.value=''; inp.style.height='auto';
+
+  addMsg('user', text);
+  showTyping();
+
+  try {
+    const r = await callAI(text);
+    document.getElementById('typing')?.remove();
+
+    // Build response bubble
+    const compTags = (r.components||[]).map(c=>`<span class="comp-tag">${c}</span>`).join('');
+    const chipTags = (r.compliance||[]).map(c=>`<span class="g-chip">✓ ${c}</span>`).join('');
+
+    const wrap = document.createElement('div');
+    wrap.className='msg'; wrap.style.animation='fadeUp .25s ease';
+    const bubble = document.createElement('div');
+    bubble.className='bubble-archi';
+    bubble.innerHTML=`
+      <div class="b-summary">${r.summary}</div>
+      <div class="diag-hdr">
+        <span class="diag-title">🏗️ Architecture Diagram</span>
+        <button class="deploy-btn" onclick="alert('Deploy request sent to ESDS eNlight team!')">🚀 Deploy to eNlight</button>
+      </div>
+      <div class="diag-wrap" id="diagSlot"></div>
+      <div class="cost-row">
+        <div class="cost-item"><div class="cost-val">${r.cost_total||'—'}</div><div class="cost-lbl">Total / month</div></div>
+        <div class="cost-item"><div class="cost-val" style="color:var(--ac)">${r.rto||'N/A'}</div><div class="cost-lbl">RTO</div></div>
+        <div class="cost-item"><div class="cost-val">✓ India</div><div class="cost-lbl">Data Residency</div></div>
+      </div>
+      <div class="chip-row">${chipTags}</div>
+      ${compTags?`<div class="comps-row"><div style="font-size:11px;font-weight:700;margin-bottom:6px;">Key Components</div>${compTags}</div>`:''}
+      ${r.esds_edge?`<div class="esds-bar"><b>ESDS Advantage: </b>${r.esds_edge}</div>`:''}
+      ${r.next_step?`<div class="next-bar"><b>Next Step: </b>${r.next_step}</div>`:''}
+    `;
+
+    const avatarEl = document.createElement('div');
+    avatarEl.className='avatar'; avatarEl.textContent='A';
+    wrap.appendChild(avatarEl);
+    wrap.appendChild(bubble);
+
+    const chat = document.getElementById('chat');
+    chat.appendChild(wrap);
+
+    // Inject live SVG diagram
+    bubble.querySelector('#diagSlot').appendChild(buildSVG(r.diagram_type));
+    chat.scrollTop = chat.scrollHeight;
+
+  } catch(err) {
+    document.getElementById('typing')?.remove();
+    addMsg('archi', `<div class="bubble-err">⚠ Error: ${err.message}<br><small style="color:var(--mt)">Check your API key or network connection.</small></div>`);
+  }
+
+  busy=false;
+  document.getElementById('sendBtn').disabled=false;
+  document.getElementById('msgInput').focus();
+}
+
+function quick(text) {
+  document.getElementById('msgInput').value = text;
+  sendMsg();
+}
+</script>
+</body>
+</html>
